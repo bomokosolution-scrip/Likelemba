@@ -1,0 +1,45 @@
+name: Build Likelemba APK
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        channel: 'stable'
+        cache: true
+
+    - name: Generate android folder
+      run: |
+        flutter create --org com.bomoko --project-name likelemba --platforms android _tmp_create
+        cp -r _tmp_create/android ./android
+        rm -rf _tmp_create
+        sed -i 's#<application#<uses-permission android:name="android.permission.INTERNET"/>\n    <application#' android/app/src/main/AndroidManifest.xml
+        sed -i 's#android:label="[^"]*"#android:label="Likelemba"#' android/app/src/main/AndroidManifest.xml
+
+    - name: Install dependencies
+      run: flutter pub get
+
+    - name: Build APK
+      run: flutter build apk --release
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: likelemba-apk
+        path: build/app/outputs/flutter-apk/app-release.apk
